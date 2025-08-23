@@ -87,10 +87,6 @@ update-dependencies: venv-check
 	@$(PIP_TOOLS) --upgrade requirements.in
 	@$(PIP_TOOLS) --upgrade requirements-dev.in
 
-pin-dependencies: venv-check
-	@echo "Pinning dependencies..."
-	@$(PIP) freeze > requirements.txt
-
 type-check: venv-check
 	@echo "Running type checking..."
 	@$(MYPY) app/ lib/
@@ -105,7 +101,7 @@ format: venv-check
 	@$(BLACK) app/ tests/ lib/
 	@$(ISORT) app/ tests/ lib/
 
-precommit: pin-dependencies format type-check lint test-unit
+precommit: sformat type-check lint test-unit
 
 clean:
 	@echo "Cleaning up..."
