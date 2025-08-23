@@ -1,0 +1,11 @@
+# Runtime (app/server + DB + outbound HTTP)
+fastapi>=0.116.1
+uvicorn[standard]>=0.35.0         # brings uvloop, httptools, websockets
+SQLAlchemy>=2.0.43
+asyncpg>=0.30.0
+greenlet>=3.2.4
+python-multipart>=0.0.20
+python-dotenv>=1.1.1
+httpx>=0.28.1
+PyYAML>=6.0.2
+rich>=14.1.0
