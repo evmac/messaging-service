@@ -101,7 +101,7 @@ format: venv-check
 	@$(BLACK) app/ tests/ lib/
 	@$(ISORT) app/ tests/ lib/
 
-precommit: sformat type-check lint test-unit
+precommit: format type-check lint test-unit
 
 clean:
 	@echo "Cleaning up..."
