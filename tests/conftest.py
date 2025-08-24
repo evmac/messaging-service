@@ -1,5 +1,5 @@
 import asyncio
-from typing import AsyncGenerator
+from typing import Any, AsyncGenerator, Generator
 
 import pytest
 from fastapi.testclient import TestClient
@@ -9,7 +9,7 @@ from app.database import AsyncSessionLocal
 
 
 @pytest.fixture(scope="session")
-def event_loop():
+def event_loop() -> Generator[asyncio.AbstractEventLoop, Any, None]:
     """Create an instance of the default event loop for the test session."""
     policy = asyncio.get_event_loop_policy()
     loop = policy.new_event_loop()
@@ -39,7 +39,7 @@ async def test_db() -> AsyncGenerator[AsyncSession, None]:
 
 
 @pytest.fixture
-def client() -> TestClient:
+def client() -> Generator[TestClient, Any, None]:
     """Create a test client for the FastAPI app."""
     from app.main import app
 

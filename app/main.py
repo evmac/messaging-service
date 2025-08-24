@@ -1,5 +1,3 @@
-"""Main FastAPI application."""
-
 import os
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Dict

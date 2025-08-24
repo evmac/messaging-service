@@ -144,3 +144,17 @@ docker-compose exec postgres psql -U messaging_user -d messaging_service
 ```
 
 Again, you are welcome to make changes here, as long as they're in the docker-compose.yml
+
+## Mock Provider Services
+
+The project includes mock implementations of SMS/MMS and Email providers for development and testing:
+
+### SMS/MMS Provider
+- **Port**: 8001 (localhost)
+- **API**: SMS/MMS provider compatible API
+- **Features**: Send SMS/MMS, simulate errors, trigger webhooks
+
+### Email Provider
+- **Port**: 8002 (localhost)
+- **API**: Email provider compatible API
+- **Features**: Send emails, simulate errors, trigger webhooks

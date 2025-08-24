@@ -19,5 +19,41 @@ services:
       timeout: 5s
       retries: 5
 
+  sms-provider:
+    build:
+      context: .
+      dockerfile: providers/Dockerfile.sms
+    container_name: messaging-sms-provider
+    environment:
+      MESSAGING_SERVICE_WEBHOOK_URL: http://messaging-service:8000/api/webhooks/sms
+      SMS_PROVIDER_API_KEY: sms_provider_api_key
+      SIMULATE_REPLIES: false
+      PORT: 8000
+    ports:
+      - "8001:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  email-provider:
+    build:
+      context: .
+      dockerfile: providers/Dockerfile.email
+    container_name: messaging-email-provider
+    environment:
+      MESSAGING_SERVICE_WEBHOOK_URL: http://messaging-service:8000/api/webhooks/email
+      EMAIL_PROVIDER_API_KEY: email_provider_api_key
+      SIMULATE_REPLIES: false
+      PORT: 8000
+    ports:
+      - "8002:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
 volumes:
-  postgres_data: 
+  postgres_data:

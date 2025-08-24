@@ -1,5 +1,3 @@
-"""Database configuration and connection management."""
-
 import os
 from typing import AsyncGenerator
 
@@ -13,8 +11,6 @@ load_dotenv()
 
 class Base(DeclarativeBase):
     """Base class for SQLAlchemy models."""
-
-    pass
 
 
 # Database configuration from environment variables
@@ -45,7 +41,6 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 async def init_db() -> None:
     """Initialize database connection on startup."""
     # Could be extended to run migrations or other startup tasks
-    pass
 
 
 async def close_db() -> None:
