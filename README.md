@@ -149,6 +149,8 @@ Again, you are welcome to make changes here, as long as they're in the docker-co
 
 The project includes mock implementations of SMS/MMS and Email providers for development and testing:
 
+See more in [the README](providers/README.md).
+
 ### SMS/MMS Provider
 - **Port**: 8001 (localhost)
 - **API**: SMS/MMS provider compatible API
