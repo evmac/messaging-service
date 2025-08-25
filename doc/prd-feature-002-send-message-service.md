@@ -47,13 +47,13 @@ class MessageResponse(BaseModel):
 ### 1. Provider Abstraction (`app/providers/`)
 Create abstract provider interface and concrete implementations:
 
-**`app/providers/base_provider.py`:**
+**`app/clients/base_provider_client.py`:**
 ```python
 from abc import ABC, abstractmethod
 from typing import Dict, Any, List
 from app.models.message import SendMessageRequest
 
-class BaseProvider(ABC):
+class BaseProviderClient(ABC):
     @abstractmethod
     async def send_message(self, request: SendMessageRequest) -> Dict[str, Any]:
         """Send message and return provider response"""
@@ -76,9 +76,9 @@ class ProviderResponse:
 import httpx
 from typing import Dict, Any, List
 from app.models.message import SendMessageRequest
-from app.providers.base_provider import BaseProvider, ProviderResponse
+from app.clients.base_provider_client import BaseProviderClient, ProviderResponse
 
-class SmsProviderClient(BaseProvider):
+class SmsProviderClient(BaseProviderClient):
     def __init__(self, base_url: str, api_key: str):
         self.base_url = base_url
         self.api_key = api_key
@@ -117,9 +117,9 @@ class SmsProviderClient(BaseProvider):
 import httpx
 from typing import Dict, Any, List
 from app.models.message import SendMessageRequest
-from app.providers.base_provider import BaseProvider, ProviderResponse
+from app.clients.base_provider_client import BaseProviderClient, ProviderResponse
 
-class EmailProviderClient(BaseProvider):
+class EmailProviderClient(BaseProviderClient):
     def __init__(self, base_url: str, api_key: str):
         self.base_url = base_url
         self.api_key = api_key
@@ -172,7 +172,7 @@ from app.models.message import SendMessageRequest, MessageResponse
 from app.repositories.message_repository import MessageRepository
 from app.repositories.conversation_repository import ConversationRepository
 from app.repositories.participant_repository import ParticipantRepository
-from app.providers.base_provider import BaseProvider, ProviderResponse
+from app.clients.base_provider_client import BaseProviderClient, ProviderResponse
 
 class SendMessageService:
     def __init__(self, db: AsyncSession):
@@ -207,26 +207,43 @@ class SendMessageService:
             await self._handle_provider_error(e, request)
             raise
 
-        # Step 4: Save message to database
-        message = await self.message_repo.create_from_provider_response(
-            conversation_id=conversation.id,
-            request=request,
-            provider_response=provider_response,
-            provider_type=provider.get_provider_type()
-        )
+        # Step 4: Create domain model from provider response
+        provider_message_id = provider.extract_message_id(provider_response)
+        status = provider.extract_status(provider_response)
+        provider_type = provider.get_provider_type(request)
 
-        # Step 5: Return formatted response
-        return MessageResponse(
-            id=message.id,
+        # Create MessageResponse domain model
+        message_response = MessageResponse(
+            id=uuid4(),
             conversation_id=conversation.id,
-            provider_type=provider.get_provider_type(),
-            provider_message_id=provider_response.provider_message_id,
+            provider_type=provider_type,
+            provider_message_id=provider_message_id,
             from_address=request.from_address,
             to_address=request.to_address,
             body=request.body,
             attachments=request.attachments or [],
             direction="outbound",
-            status=provider_response.status,
+            status=status,
+            message_timestamp=request.timestamp,
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
+        )
+
+        # Step 5: Save to database
+        message = await self.message_repo.create(message_response)
+
+        # Step 6: Return formatted response
+        return MessageResponse(
+            id=message.id,
+            conversation_id=conversation.id,
+            provider_type=provider.get_provider_type(),
+            provider_message_id=provider_message_id,
+            from_address=request.from_address,
+            to_address=request.to_address,
+            body=request.body,
+            attachments=request.attachments or [],
+            direction="outbound",
+            status=status,
             message_timestamp=request.timestamp,
             created_at=message.created_at,
             updated_at=message.updated_at

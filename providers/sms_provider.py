@@ -9,7 +9,7 @@ import uvicorn
 from fastapi import BackgroundTasks, FastAPI, HTTPException
 from pydantic import BaseModel
 
-from providers.cache import LRUCache
+from .cache import LRUCache
 
 app = FastAPI(title="Mock SMS/MMS Provider", description="Twilio-like SMS/MMS API")
 

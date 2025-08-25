@@ -75,6 +75,13 @@ test:
 	@echo "Running test script..."
 	@./bin/test.sh
 
+test-integration:
+	@echo "Running integration tests..."
+	@echo "Starting test dependencies if not running..."
+	@docker-compose up -d
+	@echo "Running message sending integration tests..."
+	@./bin/test_message_sending_integration.sh
+
 update: venv-check
 	@echo "Updating dependencies..."
 	@$(PIP_TOOLS) --upgrade requirements.in

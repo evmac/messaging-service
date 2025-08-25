@@ -8,6 +8,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import close_db, get_db, init_db
+from app.routers.messages import router as messages_router
 
 # Load environment variables
 load_dotenv()
@@ -34,6 +35,9 @@ app = FastAPI(
     version=COMMIT_HASH,
     lifespan=lifespan,
 )
+
+# Include routers
+app.include_router(messages_router, prefix="/api/messages", tags=["messages"])
 
 
 @app.get("/health")
