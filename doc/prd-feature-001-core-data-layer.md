@@ -291,3 +291,4 @@ class ConversationRepository(BaseRepository[ConversationModel, ConversationRespo
 - [ ] Repository classes implement CRUD operations
 - [ ] Database connection and table creation verified
 - [ ] Translation between Pydantic and SQLAlchemy models works correctly
+- [ ] Unit tests for component parts
