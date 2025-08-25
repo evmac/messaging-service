@@ -1,5 +1,8 @@
-from typing import Any, List, Optional
+from typing import TYPE_CHECKING, Any, List, Optional
 from uuid import UUID
+
+if TYPE_CHECKING:
+    from app.models.api.messages import WebhookMessageRequest
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -60,6 +63,33 @@ class MessageRepository(BaseRepository[MessageModel, MessageResponse]):
         updated_message = MessageResponse(**updated_data)
 
         return await self.update(message_id, updated_message)
+
+    async def create_inbound_message(
+        self, conversation_id: UUID, request: "WebhookMessageRequest"
+    ) -> MessageResponse:
+        """Create a new inbound message from webhook data."""
+        from datetime import datetime, timezone
+        from uuid import uuid4
+
+        # Create MessageResponse for inbound message
+        message_response = MessageResponse(
+            id=uuid4(),
+            conversation_id=conversation_id,
+            provider_type=request.provider_type,
+            provider_message_id=request.provider_message_id,
+            from_address=request.from_address,
+            to_address=request.to_address,
+            body=request.body,
+            attachments=request.attachments or [],
+            direction="inbound",
+            status="delivered",  # Webhook messages are already delivered
+            message_timestamp=request.timestamp,
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
+        )
+
+        # Save to database
+        return await self.create(message_response)
 
     def _to_pydantic(self, db_model: Any) -> MessageResponse:
         """Convert SQLAlchemy MessageModel to Pydantic MessageResponse."""
