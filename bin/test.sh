@@ -3,7 +3,7 @@
 # Test script for messaging service endpoints
 # This script tests the local messaging service using the JSON examples from README.md
 
-BASE_URL="http://localhost:8080"
+BASE_URL="http://localhost:8000"
 CONTENT_TYPE="Content-Type: application/json"
 
 echo "=== Testing Messaging Service Endpoints ==="
@@ -15,9 +15,8 @@ echo "1. Testing SMS send..."
 curl -X POST "$BASE_URL/api/messages/sms" \
   -H "$CONTENT_TYPE" \
   -d '{
-    "from": "+12016661234",
-    "to": "+18045551234",
-    "type": "sms",
+    "from_address": "+12016661234",
+    "to_address": "+18045551234",
     "body": "Hello! This is a test SMS message.",
     "attachments": null,
     "timestamp": "2024-11-01T14:00:00Z"
@@ -29,9 +28,8 @@ echo "2. Testing MMS send..."
 curl -X POST "$BASE_URL/api/messages/sms" \
   -H "$CONTENT_TYPE" \
   -d '{
-    "from": "+12016661234",
-    "to": "+18045551234",
-    "type": "mms",
+    "from_address": "+12016661234",
+    "to_address": "+18045551234",
     "body": "Hello! This is a test MMS message with attachment.",
     "attachments": ["https://example.com/image.jpg"],
     "timestamp": "2024-11-01T14:00:00Z"
@@ -43,8 +41,8 @@ echo "3. Testing Email send..."
 curl -X POST "$BASE_URL/api/messages/email" \
   -H "$CONTENT_TYPE" \
   -d '{
-    "from": "user@usehatchapp.com",
-    "to": "contact@gmail.com",
+    "from_address": "user@usehatchapp.com",
+    "to_address": "contact@gmail.com",
     "body": "Hello! This is a test email message with <b>HTML</b> formatting.",
     "attachments": ["https://example.com/document.pdf"],
     "timestamp": "2024-11-01T14:00:00Z"

@@ -10,7 +10,7 @@ import uvicorn
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
 from pydantic import BaseModel, EmailStr
 
-from providers.cache import LRUCache
+from .cache import LRUCache
 
 app = FastAPI(title="Mock Email Provider", description="SendGrid-like Email API")
 

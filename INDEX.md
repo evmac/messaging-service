@@ -38,8 +38,8 @@ messaging-service/
 │   │   └── webhooks.py         # Webhook processing
 │   ├── database.py             # Database configuration
 │   └── main.py                 # FastAPI application
-├── providers/                  # Mock provider services
-|   ├── base_provider.py        # Base provider patterns
+├── clients/                    # Provider client implementations
+|   ├── base_provider_client.py # Base provider client patterns
 │   ├── sms_provider.py         # Twilio-like SMS/MMS provider
 │   ├── email_provider.py       # SendGrid-like email provider
 │   ├── cache.py                # LRU cache implementation

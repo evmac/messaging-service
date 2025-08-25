@@ -1,5 +1,6 @@
+from datetime import datetime, timezone
 from typing import Any, List, Optional
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -51,10 +52,47 @@ class ConversationRepository(BaseRepository[ConversationModel, ConversationRespo
         self, participants: List[str]
     ) -> Optional[ConversationResponse]:
         """Find conversation by participant addresses."""
-        # This will require joining with participants table
-        # For now, return None - this will be implemented when we have the
-        # full participant relationship
+        # Sort participants to ensure consistent ordering for matching
+        sorted_participants = sorted(participants)
+
+        # Query for conversations that have exactly these participants
+        # Simplified approach - production might need more sophisticated matching
+        for participant_address in sorted_participants:
+            # Find conversations where this participant exists
+            query = (
+                select(self.model_class)
+                .join(self.model_class.participants)
+                .where(self.model_class.participants.any(address=participant_address))
+                .options(
+                    selectinload(self.model_class.messages),
+                    selectinload(self.model_class.participants),
+                )
+            )  # type: ignore
+            result = await self.db.execute(query)
+            conversations = result.scalars().all()
+
+            # Check each conversation to see if it has exactly the same participants
+            for conversation in conversations:
+                conversation_participants = sorted(
+                    [p.address for p in conversation.participants]
+                )
+                if conversation_participants == sorted_participants:
+                    return self._to_pydantic(conversation)
+
         return None
+
+    async def create_empty(self) -> ConversationResponse:
+        """Create a new empty conversation."""
+        empty_conversation = ConversationResponse(
+            id=uuid4(),
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
+            participants=[],
+            message_count=0,
+            last_message_timestamp=None,
+        )
+
+        return await self.create(empty_conversation)
 
     async def create(
         self, pydantic_model: ConversationResponse
