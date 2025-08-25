@@ -9,7 +9,8 @@ help:
 	@echo "  venv        - Create and activate Python virtual environment"
 	@echo "  run         - Run the application"
 	@echo "  test-unit   - Run Python unit tests"
-	@echo "  test        - Run API integration tests with curl"
+	@echo "  test        - Run project-scoped evaluation tests"
+	@echo "  test-integration - Run all integration tests"
 	@echo "  update      - Update dependencies to the latest version"
 	@echo "  type-check  - Run mypy type checking"
 	@echo "  lint        - Run linting tools (flake8, bandit)"
@@ -81,6 +82,8 @@ test-integration:
 	@docker-compose up -d
 	@echo "Running message sending integration tests..."
 	@./bin/test_message_sending_integration.sh
+	@echo "Running webhooks integration tests..."
+	@./bin/test_webhooks_integration.sh
 
 update: venv-check
 	@echo "Updating dependencies..."
