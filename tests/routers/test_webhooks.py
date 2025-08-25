@@ -68,6 +68,32 @@ class TestWebhooksRouter:
         }
 
     @pytest.fixture
+    def sample_email_webhook_data(self) -> dict:
+        """Sample email webhook data in unified format."""
+        return {
+            "from": "contact@gmail.com",
+            "to": "user@usehatchapp.com",
+            "xillio_id": "message-3",
+            "body": "<html><body>This is an incoming email with "
+            "<b>HTML</b> content</body></html>",
+            "attachments": ["https://example.com/received-document.pdf"],
+            "timestamp": "2024-11-01T14:00:00Z",
+        }
+
+    @pytest.fixture
+    def sample_email_provider_webhook_data(self) -> dict:
+        """Sample email webhook data in email provider format (SendGrid-like)."""
+        return {
+            "from_email": "contact@gmail.com",
+            "to_email": "user@usehatchapp.com",
+            "subject": "Test Email Subject",
+            "content": "This is plain text content",  # type: ignore
+            "html_content": "<html><body>This is <b>HTML</b> " "content</body></html>",
+            "x_message_id": "sg1234567890",
+            "timestamp": "2024-11-01T14:00:00Z",
+        }
+
+    @pytest.fixture
     def sample_message_response(self) -> MessageResponse:
         """Sample message response."""
         return MessageResponse(
@@ -86,14 +112,14 @@ class TestWebhooksRouter:
             updated_at=datetime.now(timezone.utc),
         )
 
-    def test_webhook_endpoint_exists(self, client: TestClient) -> None:
-        """Test that SMS webhook endpoint exists and is accessible."""
-        # Test OPTIONS request (CORS preflight)
-        response = client.options("/api/webhooks/sms")
-        assert response.status_code in [200, 404, 405]  # 405 if OPTIONS not allowed
-
-        # Test POST request with invalid data to check endpoint exists
+    def test_webhook_endpoints_exist(self, client: TestClient) -> None:
+        """Test that webhook endpoints exist and are accessible."""
+        # Test SMS webhook endpoint
         response = client.post("/api/webhooks/sms", json={})
+        assert response.status_code == 400  # Validation error, but endpoint exists
+
+        # Test email webhook endpoint
+        response = client.post("/api/webhooks/email", json={})
         assert response.status_code == 400  # Validation error, but endpoint exists
 
     @pytest.mark.asyncio
@@ -412,3 +438,246 @@ class TestWebhooksRouter:
             headers={"Content-Type": "text/plain"},
         )
         assert response.status_code == 422
+
+    # Email Webhook Tests
+
+    @pytest.mark.asyncio
+    async def test_email_webhook_unified_format(
+        self,
+        client: TestClient,
+        sample_email_webhook_data: dict,
+        sample_message_response: MessageResponse,
+    ) -> None:
+        """Test email webhook processing with unified format."""
+        # Create email-specific message response
+        email_message_response = MessageResponse(
+            id=uuid4(),
+            conversation_id=uuid4(),
+            provider_type="email",
+            provider_message_id="message-3",
+            from_address="contact@gmail.com",
+            to_address="user@usehatchapp.com",
+            body="<html><body>This is an incoming email with "
+            "<b>HTML</b> content</body></html>",
+            attachments=["https://example.com/received-document.pdf"],
+            direction="inbound",
+            status="delivered",
+            message_timestamp=datetime.fromisoformat("2024-11-01T14:00:00+00:00"),
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
+        )
+
+        with patch(
+            "app.routers.webhooks.ReceiveEmailWebhookService"
+        ) as mock_service_class:
+            mock_service = MagicMock()
+            mock_service.process_webhook = AsyncMock(
+                return_value=email_message_response
+            )
+            mock_service_class.return_value = mock_service
+
+            response = client.post(
+                "/api/webhooks/email", json=sample_email_webhook_data
+            )
+
+            assert response.status_code == 200
+            assert mock_service_class.called
+            assert mock_service.process_webhook.called
+
+            # Verify the service was called with the correct webhook data
+            call_args = mock_service.process_webhook.call_args[0][0]
+            assert call_args == sample_email_webhook_data
+
+    @pytest.mark.asyncio
+    async def test_email_webhook_provider_format(
+        self,
+        client: TestClient,
+        sample_email_provider_webhook_data: dict,
+        sample_message_response: MessageResponse,
+    ) -> None:
+        """Test email webhook processing with email provider format."""
+        # Create email-specific message response
+        email_message_response = MessageResponse(
+            id=uuid4(),
+            conversation_id=uuid4(),
+            provider_type="email",
+            provider_message_id="sg1234567890",
+            from_address="contact@gmail.com",
+            to_address="user@usehatchapp.com",
+            body="Subject: Test Email Subject\n\n<html><body>This is "
+            "<b>HTML</b> content</body></html>",
+            attachments=[],
+            direction="inbound",
+            status="delivered",
+            message_timestamp=datetime.fromisoformat("2024-11-01T14:00:00+00:00"),
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
+        )
+
+        with patch(
+            "app.routers.webhooks.ReceiveEmailWebhookService"
+        ) as mock_service_class:
+            mock_service = MagicMock()
+            mock_service.process_webhook = AsyncMock(
+                return_value=email_message_response
+            )
+            mock_service_class.return_value = mock_service
+
+            response = client.post(
+                "/api/webhooks/email", json=sample_email_provider_webhook_data
+            )
+
+            assert response.status_code == 200
+            assert mock_service_class.called
+            assert mock_service.process_webhook.called
+
+            # Verify the service was called with the correct webhook data
+            call_args = mock_service.process_webhook.call_args[0][0]
+            assert call_args == sample_email_provider_webhook_data
+
+    def test_email_webhook_validation_missing_from_addr(
+        self, client: TestClient
+    ) -> None:
+        """Test email webhook validation when from_address is missing."""
+        invalid_data = {
+            "to": "user@usehatchapp.com",
+            "body": "Test email content",
+            "xillio_id": "message-3",
+            "timestamp": "2024-11-01T14:00:00Z",
+        }
+
+        response = client.post("/api/webhooks/email", json=invalid_data)
+        assert response.status_code == 400
+
+        response_data = response.json()
+        assert "detail" in response_data
+        assert (
+            "Invalid webhook format: missing required fields" in response_data["detail"]
+        )
+
+    def test_email_webhook_validation_invalid_email_fmt(
+        self, client: TestClient
+    ) -> None:
+        """Test email webhook validation when email format is invalid."""
+        invalid_data = {
+            "from": "invalid-email-format",
+            "to": "user@usehatchapp.com",
+            "body": "Test email content",
+            "xillio_id": "message-3",
+            "timestamp": "2024-11-01T14:00:00Z",
+        }
+
+        response = client.post("/api/webhooks/email", json=invalid_data)
+        assert response.status_code == 400
+
+        response_data = response.json()
+        assert "detail" in response_data
+        assert "Invalid from_address format" in response_data["detail"]
+
+    def test_email_webhook_validation_missing_body(self, client: TestClient) -> None:
+        """Test email webhook validation when body is missing."""
+        invalid_data = {
+            "from": "contact@gmail.com",
+            "to": "user@usehatchapp.com",
+            "xillio_id": "message-3",
+            "timestamp": "2024-11-01T14:00:00Z",
+        }
+
+        response = client.post("/api/webhooks/email", json=invalid_data)
+        assert response.status_code == 400
+
+        response_data = response.json()
+        assert "detail" in response_data
+        assert "Missing required field: body" in response_data["detail"]
+
+    def test_email_webhook_validation_missing_provider_msg_id(
+        self, client: TestClient
+    ) -> None:
+        """Test email webhook validation when provider_message_id
+        is missing."""
+        invalid_data = {
+            "from": "contact@gmail.com",
+            "to": "user@usehatchapp.com",
+            "body": "Test email content",
+            "timestamp": "2024-11-01T14:00:00Z",
+        }
+
+        response = client.post("/api/webhooks/email", json=invalid_data)
+        assert response.status_code == 400
+
+        response_data = response.json()
+        assert "detail" in response_data
+        assert "Missing required field: provider_message_id" in response_data["detail"]
+
+    def test_email_webhook_validation_invalid_ts(self, client: TestClient) -> None:
+        """Test email webhook validation when timestamp is invalid."""
+        invalid_data = {
+            "from": "contact@gmail.com",
+            "to": "user@usehatchapp.com",
+            "body": "Test email content",
+            "xillio_id": "message-3",
+            "timestamp": "invalid-timestamp",
+        }
+
+        response = client.post("/api/webhooks/email", json=invalid_data)
+        assert response.status_code == 400
+
+        response_data = response.json()
+        assert "detail" in response_data
+        assert "Invalid timestamp format" in response_data["detail"]
+
+    def test_email_webhook_validation_invalid_format(self, client: TestClient) -> None:
+        """Test email webhook validation when format is completely invalid."""
+        # Test dictionary with neither format
+        response = client.post("/api/webhooks/email", json={"some_field": "some_value"})
+        assert response.status_code == 400
+
+        response_data = response.json()
+        assert "detail" in response_data
+        assert "Invalid webhook format" in response_data["detail"]
+
+    @pytest.mark.asyncio
+    async def test_email_webhook_service_error_handling(
+        self, client: TestClient, sample_email_webhook_data: dict
+    ) -> None:
+        """Test email webhook error handling when service raises an exception."""
+        with patch(
+            "app.routers.webhooks.ReceiveEmailWebhookService"
+        ) as mock_service_class:
+            mock_service = MagicMock()
+            mock_service.process_webhook = AsyncMock(
+                side_effect=ValueError("Service error")
+            )
+            mock_service_class.return_value = mock_service
+
+            response = client.post(
+                "/api/webhooks/email", json=sample_email_webhook_data
+            )
+
+            assert response.status_code == 400
+            response_data = response.json()
+            assert "detail" in response_data
+            assert "Service error" in response_data["detail"]
+
+    @pytest.mark.asyncio
+    async def test_email_webhook_unexpected_error_handling(
+        self, client: TestClient, sample_email_webhook_data: dict
+    ) -> None:
+        """Test email webhook error handling when unexpected error occurs."""
+        with patch(
+            "app.routers.webhooks.ReceiveEmailWebhookService"
+        ) as mock_service_class:
+            mock_service = MagicMock()
+            mock_service.process_webhook = AsyncMock(
+                side_effect=Exception("Unexpected error")
+            )
+            mock_service_class.return_value = mock_service
+
+            response = client.post(
+                "/api/webhooks/email", json=sample_email_webhook_data
+            )
+
+            assert response.status_code == 500
+            response_data = response.json()
+            assert "detail" in response_data
+            assert "Internal server error" in response_data["detail"]
