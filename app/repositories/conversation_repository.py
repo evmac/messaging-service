@@ -8,6 +8,7 @@ from sqlalchemy.orm import selectinload
 
 from app.models.api.conversations import ConversationResponse
 from app.models.db.conversation_model import ConversationModel
+from app.models.db.participant_model import ParticipantModel
 from app.repositories.base_repository import BaseRepository
 
 
@@ -135,6 +136,41 @@ class ConversationRepository(BaseRepository[ConversationModel, ConversationRespo
         result = await self.db.execute(query)
         db_model = result.scalar_one_or_none()
         return self._to_pydantic(db_model) if db_model else None
+
+    async def list_conversations(
+        self,
+        limit: Optional[int] = 50,
+        offset: Optional[int] = 0,
+        participant_address: Optional[str] = None,
+    ) -> List[ConversationResponse]:
+        """List conversations with optional filtering."""
+
+        # Use simpler approach that works with existing _to_pydantic method
+        # The existing method handles message count and last message timestamp
+        query = select(self.model_class).options(
+            selectinload(self.model_class.messages),
+            selectinload(self.model_class.participants),
+        )
+
+        # Filter by participant if provided
+        if participant_address:
+            query = query.join(self.model_class.participants).where(
+                ParticipantModel.address == participant_address
+            )
+
+        # Order by created_at for now (we can improve this later)
+        query = query.order_by(self.model_class.created_at.desc())
+
+        # Apply pagination
+        if limit is not None:
+            query = query.limit(limit)
+        if offset is not None:
+            query = query.offset(offset)
+
+        result = await self.db.execute(query)
+        db_models = result.scalars().all()
+
+        return [self._to_pydantic(db_model) for db_model in db_models]
 
     def _to_pydantic(self, db_model: Any) -> ConversationResponse:
         """Convert SQLAlchemy ConversationModel to Pydantic ConversationResponse."""

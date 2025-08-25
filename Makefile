@@ -86,6 +86,8 @@ test-integration:
 	@./bin/test_sms_mms_webhooks_integration.sh
 	@echo "Running email webhooks integration tests..."
 	@./bin/test_email_webhooks_integration.sh
+	@echo "Running conversations integration tests..."
+	@./bin/test_conversations_integration.sh
 
 update: venv-check
 	@echo "Updating dependencies..."
