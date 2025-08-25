@@ -46,7 +46,7 @@ class TestSendMessageService:
             mock_getenv.side_effect = lambda key, default="": {
                 "EMAIL_PROVIDER_URL": "http://email-provider.com",
                 "EMAIL_PROVIDER_API_KEY": "email-key",
-            }.get(key, "")
+            }.get(key, default)
 
             provider = service._get_provider_for_request(request)
             assert isinstance(provider, EmailProviderClient)

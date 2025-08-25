@@ -8,6 +8,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import close_db, get_db, init_db
+from app.routers.conversations import router as conversations_router
 from app.routers.messages import router as messages_router
 from app.routers.webhooks import router as webhooks_router
 
@@ -38,6 +39,9 @@ app = FastAPI(
 )
 
 # Include routers
+app.include_router(
+    conversations_router, prefix="/api/conversations", tags=["conversations"]
+)
 app.include_router(messages_router, prefix="/api/messages", tags=["messages"])
 app.include_router(webhooks_router, prefix="/api/webhooks", tags=["webhooks"])
 
