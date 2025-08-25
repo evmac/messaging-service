@@ -1,4 +1,5 @@
 import os
+import tracemalloc
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Dict
 
@@ -8,6 +9,9 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import close_db, get_db, init_db
+
+tracemalloc.start()
+
 
 # Load environment variables
 load_dotenv()
