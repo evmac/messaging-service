@@ -82,8 +82,10 @@ test-integration:
 	@docker-compose up -d
 	@echo "Running message sending integration tests..."
 	@./bin/test_message_sending_integration.sh
-	@echo "Running webhooks integration tests..."
-	@./bin/test_webhooks_integration.sh
+	@echo "Running SMS/MMS webhooks integration tests..."
+	@./bin/test_sms_mms_webhooks_integration.sh
+	@echo "Running email webhooks integration tests..."
+	@./bin/test_email_webhooks_integration.sh
 
 update: venv-check
 	@echo "Updating dependencies..."
