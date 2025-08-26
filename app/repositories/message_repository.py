@@ -6,6 +6,7 @@ if TYPE_CHECKING:
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy.orm import selectinload
 
 from app.models.api.messages import MessageResponse
 from app.models.db.message_model import MessageModel
@@ -27,6 +28,35 @@ class MessageRepository(BaseRepository[MessageModel, MessageResponse]):
         )  # type: ignore
         result = await self.db.execute(query)
         db_models = result.scalars().all()
+        return [self._to_pydantic(db_model) for db_model in db_models]
+
+    async def get_by_conversation_id(
+        self,
+        conversation_id: UUID,
+        limit: Optional[int] = 100,
+        offset: Optional[int] = 0,
+        direction: Optional[str] = None,
+    ) -> List[MessageResponse]:
+        """Get messages for a specific conversation with pagination and filtering."""
+        query = (
+            select(self.model_class)
+            .options(selectinload(self.model_class.conversation))
+            .where(self.model_class.conversation_id == conversation_id)
+        )
+
+        # Filter by direction if provided
+        if direction:
+            query = query.where(self.model_class.direction == direction)
+
+        # Order by message timestamp (oldest first for conversation flow)
+        query = query.order_by(self.model_class.message_timestamp.asc())
+
+        # Apply pagination
+        query = query.limit(limit).offset(offset)
+
+        result = await self.db.execute(query)
+        db_models = result.scalars().all()
+
         return [self._to_pydantic(db_model) for db_model in db_models]
 
     async def get_by_provider_message_id(

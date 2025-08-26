@@ -95,14 +95,27 @@ curl -X POST "$BASE_URL/api/webhooks/email" \
 
 # Test 7: Get conversations
 echo "7. Testing get conversations..."
-curl -X GET "$BASE_URL/api/conversations" \
-  -H "$CONTENT_TYPE" \
-  -w "\nStatus: %{http_code}\n\n"
+CONVERSATIONS_RESPONSE=$(curl -s -X GET "$BASE_URL/api/conversations" \
+  -H "$CONTENT_TYPE")
 
-# Test 8: Get messages for a conversation (example conversation ID)
+# Extract the first conversation ID from the response
+FIRST_CONVERSATION_ID=$(echo "$CONVERSATIONS_RESPONSE" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+
+echo "Conversations response:"
+echo "$CONVERSATIONS_RESPONSE"
+echo "Status: $(curl -s -o /dev/null -w "%{http_code}" -X GET "$BASE_URL/api/conversations" -H "$CONTENT_TYPE")"
+echo
+
+# Test 8: Get messages for a conversation (using first conversation ID found)
 echo "8. Testing get messages for conversation..."
-curl -X GET "$BASE_URL/api/conversations/1/messages" \
-  -H "$CONTENT_TYPE" \
-  -w "\nStatus: %{http_code}\n\n"
+if [ -n "$FIRST_CONVERSATION_ID" ]; then
+    echo "Using conversation ID: $FIRST_CONVERSATION_ID"
+    curl -X GET "$BASE_URL/api/conversations/$FIRST_CONVERSATION_ID/messages" \
+      -H "$CONTENT_TYPE" \
+      -w "\nStatus: %{http_code}\n\n"
+else
+    echo "No conversation ID found, skipping test..."
+    echo "Status: N/A (no conversations available)\n"
+fi
 
 echo "=== Test script completed ===" 
