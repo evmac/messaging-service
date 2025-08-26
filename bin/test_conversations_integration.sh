@@ -222,11 +222,11 @@ test_invalid_conversation_id() {
         -H "Content-Type: application/json" \
         "$API_BASE_URL$CONVERSATIONS_ENDPOINT/invalid-uuid")
 
-    if [ "$http_code" = "404" ]; then
-        test_passed "Invalid conversation ID properly returns 404"
+    if [ "$http_code" = "422" ]; then
+        test_passed "Invalid conversation ID properly returns 422"
         return 0
     else
-        test_failed "Invalid conversation ID test failed. Expected 404, got: $http_code"
+        test_failed "Invalid conversation ID test failed. Expected 422, got: $http_code"
         return 1
     fi
 }

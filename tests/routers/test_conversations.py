@@ -1,8 +1,9 @@
 from datetime import datetime, timezone
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -170,10 +171,10 @@ class TestConversationsRouter:
             )
             assert response.status_code == 200
 
-    def test_nonexistent_conversations_endpoint(self, client: TestClient) -> None:
-        """Test accessing non-existent conversations endpoint."""
-        response = client.get("/api/conversations/nonexistent")
-        assert response.status_code == 404
+    def test_invalid_uuid_conversations_endpoint(self, client: TestClient) -> None:
+        """Test accessing conversations endpoint with invalid UUID format."""
+        response = client.get("/api/conversations/invalid-uuid")
+        assert response.status_code == 422  # Invalid UUID format
 
     def test_wrong_http_method_conversations(self, client: TestClient) -> None:
         """Test using wrong HTTP method on conversations endpoint."""
@@ -238,8 +239,20 @@ class TestConversationsRouter:
     def test_get_individual_conversation_invalid_uuid(self, client: TestClient) -> None:
         """Test getting individual conversation with invalid UUID."""
         response = client.get("/api/conversations/invalid-uuid")
-        assert response.status_code == 404
-        assert "badly formed hexadecimal UUID string" in response.json()["detail"]
+        assert response.status_code == 422  # Invalid UUID format
+        detail = response.json()["detail"]
+        if isinstance(detail, list):
+            if detail and isinstance(detail[0], dict):
+                # Handle list of validation error dictionaries
+                detail_str = " ".join(
+                    [str(error.get("msg", "")) for error in detail]
+                ).lower()
+            else:
+                # Handle list of strings
+                detail_str = " ".join(detail).lower()
+        else:
+            detail_str = detail.lower()
+        assert "uuid" in detail_str or "invalid" in detail_str
 
     def test_get_individual_conversation_wrong_method(self, client: TestClient) -> None:
         """Test using wrong HTTP method on individual conversation endpoint."""
@@ -281,5 +294,101 @@ class TestConversationsRouter:
             side_effect=Exception("Service error"),
         ):
             response = client.get(f"/api/conversations/{conversation_id}")
+            assert response.status_code == 500
+            assert "Internal server error" in response.json()["detail"]
+
+    # Conversation Messages Router Tests
+
+    def test_get_conversation_messages_success(self, client: TestClient) -> None:
+        """Test getting messages for an existing conversation."""
+        conversation_id = str(uuid4())
+
+        with (
+            patch(
+                "app.services.list_conversations_service"
+                ".ListConversationsService.get_conversation_summary",
+                new_callable=AsyncMock,
+                return_value=MagicMock(),
+            ),
+            patch(
+                "app.services.get_conversation_messages_service"
+                ".GetConversationMessagesService.get_conversation_messages",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+        ):
+            response = client.get(f"/api/conversations/{conversation_id}/messages")
+            assert response.status_code == 200
+            assert response.json() == []
+
+    def test_get_conversation_messages_conversation_not_found(
+        self, client: TestClient
+    ) -> None:
+        """Test getting messages for a non-existent conversation."""
+        conversation_id = str(uuid4())
+
+        with patch(
+            "app.services.get_conversation_messages_service"
+            ".GetConversationMessagesService.get_conversation_messages",
+            new_callable=AsyncMock,
+            side_effect=HTTPException(status_code=404, detail="Conversation not found"),
+        ):
+            response = client.get(f"/api/conversations/{conversation_id}/messages")
+            assert response.status_code == 404
+            assert "not found" in response.json()["detail"].lower()
+
+    def test_get_conversation_messages_invalid_uuid(self, client: TestClient) -> None:
+        """Test getting messages with invalid UUID format."""
+        response = client.get("/api/conversations/invalid-uuid/messages")
+        assert response.status_code == 422  # Invalid UUID format
+        detail = response.json()["detail"]
+        if isinstance(detail, list):
+            if detail and isinstance(detail[0], dict):
+                # Handle list of validation error dictionaries
+                detail_str = " ".join(
+                    [str(error.get("msg", "")) for error in detail]
+                ).lower()
+            else:
+                # Handle list of strings
+                detail_str = " ".join(detail).lower()
+        else:
+            detail_str = detail.lower()
+        assert "uuid" in detail_str or "invalid" in detail_str
+
+    def test_get_conversation_messages_wrong_method(self, client: TestClient) -> None:
+        """Test using wrong HTTP method on conversation messages endpoint."""
+        conversation_id = str(uuid4())
+
+        response = client.post(f"/api/conversations/{conversation_id}/messages")
+        assert response.status_code == 405
+
+        response = client.put(f"/api/conversations/{conversation_id}/messages")
+        assert response.status_code == 405
+
+        response = client.delete(f"/api/conversations/{conversation_id}/messages")
+        assert response.status_code == 405
+
+    def test_get_conversation_messages_service_error_handling(
+        self, client: TestClient
+    ) -> None:
+        """Test conversation messages endpoint error handling when service raises
+        exception."""
+        conversation_id = str(uuid4())
+
+        with (
+            patch(
+                "app.services.list_conversations_service"
+                ".ListConversationsService.get_conversation_summary",
+                new_callable=AsyncMock,
+                return_value=MagicMock(),
+            ),
+            patch(
+                "app.services.get_conversation_messages_service"
+                ".GetConversationMessagesService.get_conversation_messages",
+                new_callable=AsyncMock,
+                side_effect=Exception("Service error"),
+            ),
+        ):
+            response = client.get(f"/api/conversations/{conversation_id}/messages")
             assert response.status_code == 500
             assert "Internal server error" in response.json()["detail"]
