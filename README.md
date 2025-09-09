@@ -29,6 +29,118 @@ The service should implement:
 - **Conversation Management**: Messages should be automatically grouped into conversations based on participants (from/to addresses)
 - **Data Persistence**: All conversations and messages must be stored in a relational database with proper relationships and indexing
 
+## Database & Migrations
+
+### Database Setup
+
+The project uses PostgreSQL as the relational database with SQLAlchemy ORM for data persistence. The database schema includes:
+
+- **Conversations**: Groups messages between participants
+- **Messages**: Individual messages from SMS/MMS and Email providers
+- **Participants**: Tracks who is involved in each conversation
+
+Database schema is managed through **Alembic migrations** (managed separately from the application):
+- Table creation and modification
+- Indexes and constraints
+- PostgreSQL functions and triggers
+- Proper dependency ordering (functions before triggers, etc.)
+
+**Important**: The main application is **agnostic of migrations** - it simply connects to whatever database schema exists. Migrations are managed as a separate deployment/infrastructure concern.
+
+### Migration Strategy
+
+Database migrations are managed using **Alembic**, SQLAlchemy's official migration tool. The migration system provides:
+
+- **Version Control**: Track all database schema changes
+- **Environment Safety**: Safe migrations across development, staging, and production
+- **Rollback Support**: Ability to downgrade if issues arise
+- **Team Collaboration**: Migrations as code that can be reviewed
+
+#### Migration Commands
+
+Use the provided Makefile commands for easier migration management:
+
+```bash
+# Create new migration from model changes (interactive)
+make migrate-new
+
+# Upgrade database to latest migration
+make migrate-up
+
+# Downgrade database to base (removes all migrations)
+make migrate-down
+
+# Show current migration version
+make migrate-current
+
+# Show migration history
+make migrate-history
+
+# Check for pending model changes
+make migrate-check
+```
+
+#### Migration Workflow
+
+**⚠️ Important**: Migrations are managed **separately from the application**. Run these commands **before** starting the application:
+
+1. **Make model changes** in your SQLAlchemy models (e.g., `app/models/db/*.py`)
+2. **Generate migration**: `make migrate-new` (enter a descriptive message)
+3. **Review the generated migration** in `migrations/versions/`
+4. **Apply migration**: `make migrate-up`
+5. **Verify**: `make migrate-current`
+
+**Note**: The initial schema migration creates all necessary tables, indexes, functions, and triggers in the correct dependency order. Subsequent migrations will handle any schema changes.
+
+**Application Startup**: The application simply connects to whatever database schema exists - it has no knowledge of or dependency on migrations.
+
+### Database Configuration
+
+Alembic automatically loads environment variables from a `.env` file if it exists in the project root. This makes configuration easier and more secure.
+
+**Option 1: Using .env file (Recommended)**
+
+Create a `.env` file in the project root:
+
+```bash
+# .env
+DATABASE_URL=postgresql+asyncpg://messaging_user:messaging_password@localhost:5432/messaging_service
+SQL_DEBUG=false
+```
+
+Alembic will automatically load this file when running migrations.
+
+**Option 2: Environment Variables**
+
+Set environment variables directly:
+
+```bash
+export DATABASE_URL="postgresql+asyncpg://messaging_user:messaging_password@localhost:5432/messaging_service"
+export SQL_DEBUG=false
+```
+
+**Option 3: Makefile Commands**
+
+The provided Makefile commands handle database operations:
+
+```bash
+make migrate-current    # Check current migration status
+make migrate-new        # Create new migration (interactive)
+make migrate-up         # Apply all migrations
+make migrate-down       # Rollback migrations
+make migrate-history    # View migration history
+```
+
+### Environment Variables
+
+```bash
+# Database connection (required)
+DATABASE_URL=postgresql+asyncpg://messaging_user:messaging_password@localhost:5432/messaging_service
+
+# Debug logging (optional)
+SQL_DEBUG=false
+```
+
 ### Providers
 
 **SMS & MMS**

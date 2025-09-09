@@ -10,6 +10,9 @@ pytest>=8.4.1
 pytest-asyncio>=1.1.0
 bandit>=1.8.6
 
+# Database migrations
+alembic>=1.13.0
+
 # Build/pinning utilities
 pip-tools>=7.5.0
 build>=1.3.0

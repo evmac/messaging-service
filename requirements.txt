@@ -65,7 +65,7 @@ sqlalchemy==2.0.43
     # via -r requirements.in
 starlette==0.47.3
     # via fastapi
-typing-extensions==4.14.1
+typing-extensions==4.15.0
     # via
     #   fastapi
     #   pydantic

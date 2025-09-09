@@ -10,6 +10,9 @@ __pycache__
 .mypy_cache/
 .coverage
 
+# Application environment
+.env
+
 # IDE and editors
 .vscode/
 .idea/

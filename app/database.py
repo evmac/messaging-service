@@ -40,7 +40,9 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 async def init_db() -> None:
     """Initialize database connection on startup."""
-    # Could be extended to run migrations or other startup tasks
+    # Database connection is established when the module is imported
+    # The application is agnostic of migrations - they are managed separately
+    pass
 
 
 async def close_db() -> None:
