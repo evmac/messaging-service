@@ -7,7 +7,7 @@ from fastapi import Depends, FastAPI
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import close_db, get_db, init_db
+from app.database import close_db, db_session, init_db
 from app.routers.conversations import router as conversations_router
 from app.routers.messages import router as messages_router
 from app.routers.webhooks import router as webhooks_router
@@ -16,9 +16,14 @@ from app.routers.webhooks import router as webhooks_router
 load_dotenv()
 
 # Environment variable parsing
-COMMIT_HASH = os.getenv("COMMIT_HASH", "unknown")
-APP_ADDR = os.getenv("HOST", "127.0.0.1")  # Default to localhost for security
-APP_PORT = int(os.getenv("PORT", "8080"))
+ENV = os.getenv("ENV")
+ENV_IS_PROD = ENV == "prod"
+COMMIT_HASH = os.getenv("COMMIT_HASH")
+if not COMMIT_HASH and ENV_IS_PROD:
+    raise ValueError("COMMIT_HASH is required for production environments")
+
+APP_ADDR = os.getenv("HOST", "0.0.0.0")
+APP_PORT = int(os.getenv("PORT", "8000"))
 
 
 @asynccontextmanager
@@ -47,7 +52,7 @@ app.include_router(webhooks_router, prefix="/api/webhooks", tags=["webhooks"])
 
 
 @app.get("/health")
-async def health_check(db: AsyncSession = Depends(get_db)) -> Dict[str, str]:
+async def health_check(db: AsyncSession = Depends(db_session)) -> Dict[str, str]:
     """Health check endpoint with database connectivity."""
     try:
         # Test database connection
@@ -59,6 +64,7 @@ async def health_check(db: AsyncSession = Depends(get_db)) -> Dict[str, str]:
     return {
         "status": "healthy" if db_status == "connected" else "degraded",
         "database": db_status,
+        "environment": ENV,
         "version": COMMIT_HASH,
     }
 

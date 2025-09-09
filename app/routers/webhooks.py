@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import get_db
+from app.database import db_session
 from app.models.api.messages import MessageResponse
 from app.services.receive_email_webhook_service import ReceiveEmailWebhookService
 from app.services.receive_sms_mms_webhook_service import ReceiveSmsMmsWebhookService
@@ -11,7 +11,7 @@ router = APIRouter()
 
 @router.post("/sms", response_model=MessageResponse)
 async def receive_sms_webhook(
-    webhook_data: dict, db: AsyncSession = Depends(get_db)
+    webhook_data: dict, db: AsyncSession = Depends(db_session)
 ) -> MessageResponse:
     """
     Handle incoming SMS/MMS webhooks from SMS provider.
@@ -33,7 +33,7 @@ async def receive_sms_webhook(
 
 @router.post("/email", response_model=MessageResponse)
 async def receive_email_webhook(
-    webhook_data: dict, db: AsyncSession = Depends(get_db)
+    webhook_data: dict, db: AsyncSession = Depends(db_session)
 ) -> MessageResponse:
     """
     Handle incoming email webhooks from Email provider.

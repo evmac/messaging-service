@@ -29,8 +29,8 @@ AsyncSessionLocal = async_sessionmaker(
 )
 
 
-async def get_db() -> AsyncGenerator[AsyncSession, None]:
-    """Dependency to get database session."""
+async def db_session() -> AsyncGenerator[AsyncSession, None]:
+    """Handler to manage database session lifecycle."""
     async with AsyncSessionLocal() as session:
         try:
             yield session
@@ -39,8 +39,9 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 
 async def init_db() -> None:
-    """Initialize database connection on startup."""
-    # Could be extended to run migrations or other startup tasks
+    """Initialize database."""
+    # No specific initialization required at this time
+    pass
 
 
 async def close_db() -> None:

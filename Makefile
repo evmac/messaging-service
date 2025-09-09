@@ -1,6 +1,6 @@
 .ONESHELL:
 
-.PHONY: help venv-setup venv-check venv-activate venv-deactivate venv venv-deactivate venv-activate venv-check venv-setup setup run test-unit test update type-check lint format precommit clean db-setup db-up db-down db-logs db-shell providers-setup providers-up providers-down providers-logs providers-reset
+.PHONY: help venv-setup venv-check venv-activate venv-deactivate venv venv-deactivate venv-activate venv-check venv-setup setup run test-unit test update type-check lint format precommit clean db-setup db-up db-down db-logs db-shell providers-setup providers-up providers-down providers-logs providers-reset migrate migrate-new migrate-up migrate-down migrate-current migrate-history migrate-check
 
 help:
 	@echo "Available commands:"
@@ -21,6 +21,12 @@ help:
 	@echo "  db-reset    - Reset database (stop, remove volumes, restart)"
 	@echo "  db-logs     - Show database logs"
 	@echo "  db-shell    - Connect to the database shell"
+	@echo "  migrate-new - Create new migration from model changes"
+	@echo "  migrate-up  - Upgrade database to latest migration"
+	@echo "  migrate-down - Downgrade database to base (removes all migrations)"
+	@echo "  migrate-current - Show current migration version"
+	@echo "  migrate-history - Show migration history"
+	@echo "  migrate-check - Check for pending model changes"
 	@echo "  providers-reset - Reset the provider services (stop, restart)"
 	@echo "  providers-logs  - Show provider service logs"
 
@@ -38,6 +44,7 @@ BANDIT := $(VENV_DIR)/bin/bandit
 BLACK := $(VENV_DIR)/bin/black
 ISORT := $(VENV_DIR)/bin/isort
 AUTOFLAKE := $(VENV_DIR)/bin/autoflake
+ALEMBIC := $(VENV_DIR)/bin/alembic
 
 venv-setup:
 	@echo "Creating Python virtual environment..."
@@ -59,7 +66,7 @@ app-setup: venv-check
 	@$(PIP) install -r requirements.txt
 	@$(PIP) install -r requirements-dev.txt
 
-setup: venv-setup db-setup providers-setup app-setup
+setup: venv-setup db-setup providers-setup app-setup migrate-up
 
 run: venv-check
 	@echo "Running the application..."
@@ -127,6 +134,7 @@ clean:
 	@find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 	@find . -type f -name "*.pyc" -delete 2>/dev/null || true
 
+# Database commands
 db-setup:
 	@echo "Setting up the database..."
 	@docker-compose up -d postgres
@@ -153,6 +161,34 @@ db-shell:
 	@echo "Connecting to database shell..."
 	@docker-compose exec postgres psql -U messaging_user -d messaging_service
 
+# Migration commands
+migrate-new: venv-check
+	@echo "Creating new migration from model changes..."
+	@echo "Enter migration message:"
+	@read message; \
+	$(ALEMBIC) revision --autogenerate -m "$$message"
+
+migrate-up: venv-check
+	@echo "Upgrading database to latest migration..."
+	@$(ALEMBIC) upgrade head
+
+migrate-down: venv-check
+	@echo "Downgrading database to base (removes all migrations)..."
+	@$(ALEMBIC) downgrade base
+
+migrate-current: venv-check
+	@echo "Showing current migration version..."
+	@$(ALEMBIC) current
+
+migrate-history: venv-check
+	@echo "Showing migration history..."
+	@$(ALEMBIC) history
+
+migrate-check: venv-check
+	@echo "Checking for pending model changes..."
+	@$(ALEMBIC) check
+
+# Providers commands
 providers-setup:
 	@echo "Setting up provider services..."
 	@docker-compose up -d sms-provider email-provider

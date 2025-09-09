@@ -181,7 +181,7 @@ class ReceiveSmsMmsWebhookService:
 ```python
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.database import get_db
+from app.database import db_session
 from app.models.message import MessageResponse
 from app.services.receive_sms_mms_webhook_service import ReceiveSmsMmsWebhookService
 
@@ -190,7 +190,7 @@ router = APIRouter()
 @router.post("/sms", response_model=MessageResponse)
 async def receive_sms_webhook(
     webhook_data: dict,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(db_session)
 ) -> MessageResponse:
     """
     Handle incoming SMS/MMS webhooks from SMS provider.

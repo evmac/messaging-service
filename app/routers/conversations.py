@@ -4,7 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import get_db
+from app.database import db_session
 from app.models.api.conversations import ConversationResponse
 from app.models.api.messages import MessageResponse
 from app.services.get_conversation_messages_service import (
@@ -26,7 +26,7 @@ async def list_conversations(
     participant: Optional[str] = Query(
         None, description="Filter by participant address"
     ),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(db_session),
 ) -> List[ConversationResponse]:
     """
     List all conversations with optional filtering.
@@ -50,7 +50,7 @@ async def list_conversations(
 
 @router.get("/{conversation_id}", response_model=ConversationResponse)
 async def get_conversation(
-    conversation_id: UUID, db: AsyncSession = Depends(get_db)
+    conversation_id: UUID, db: AsyncSession = Depends(db_session)
 ) -> ConversationResponse:
     """
     Get detailed information about a specific conversation.
@@ -79,7 +79,7 @@ async def get_conversation_messages(
     direction: Optional[str] = Query(
         None, description="Filter by message direction ('inbound', 'outbound')"
     ),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(db_session),
 ) -> List[MessageResponse]:
     """
     Get all messages for a specific conversation.
