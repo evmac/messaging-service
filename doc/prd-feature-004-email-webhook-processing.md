@@ -167,7 +167,7 @@ from app.services.receive_email_webhook_service import ReceiveEmailWebhookServic
 @router.post("/email", response_model=MessageResponse)
 async def receive_email_webhook(
     webhook_data: dict,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(db_session)
 ) -> MessageResponse:
     """
     Handle incoming email webhooks from Email provider.

@@ -5,7 +5,9 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-ModelType = TypeVar("ModelType")
+from app.database import Base
+
+ModelType = TypeVar("ModelType", bound=Base)
 PydanticType = TypeVar("PydanticType", bound=BaseModel)
 
 
@@ -78,14 +80,14 @@ class BaseRepository(Generic[ModelType, PydanticType]):
         db_models = result.scalars().all()
         return [self._to_pydantic(db_model) for db_model in db_models]
 
-    def _to_pydantic(self, db_model: Any) -> PydanticType:
+    def _to_pydantic(self, db_model: ModelType) -> PydanticType:
         """Convert SQLAlchemy model to Pydantic model.
 
         This should be overridden in subclasses for specific conversion logic.
         """
         raise NotImplementedError
 
-    def _from_pydantic(self, pydantic_model: PydanticType) -> Any:
+    def _from_pydantic(self, pydantic_model: PydanticType) -> ModelType:
         """Convert Pydantic model to SQLAlchemy model.
 
         This should be overridden in subclasses for specific conversion logic.

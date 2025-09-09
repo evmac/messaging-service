@@ -87,7 +87,7 @@ async def get_conversation_messages(
     limit: Optional[int] = Query(100, description="Maximum number of messages to return"),
     offset: Optional[int] = Query(0, description="Number of messages to skip"),
     direction: Optional[str] = Query(None, description="Filter by message direction ('inbound', 'outbound')"),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(db_session)
 ) -> List[MessageResponse]:
     """
     Get all messages for a specific conversation.

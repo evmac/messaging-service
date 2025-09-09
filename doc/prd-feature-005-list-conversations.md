@@ -65,7 +65,7 @@ class ListConversationsService:
 from typing import List, Optional
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.database import get_db
+from app.database import db_session
 from app.models.conversation import ConversationResponse
 from app.services.list_conversations_service import ListConversationsService
 
@@ -76,7 +76,7 @@ async def list_conversations(
     limit: Optional[int] = Query(50, description="Maximum number of conversations to return"),
     offset: Optional[int] = Query(0, description="Number of conversations to skip"),
     participant: Optional[str] = Query(None, description="Filter by participant address"),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(db_session)
 ) -> List[ConversationResponse]:
     """
     List all conversations with optional filtering.

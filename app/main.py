@@ -7,7 +7,7 @@ from fastapi import Depends, FastAPI
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import close_db, get_db, init_db
+from app.database import close_db, db_session, init_db
 from app.routers.conversations import router as conversations_router
 from app.routers.messages import router as messages_router
 from app.routers.webhooks import router as webhooks_router
@@ -52,7 +52,7 @@ app.include_router(webhooks_router, prefix="/api/webhooks", tags=["webhooks"])
 
 
 @app.get("/health")
-async def health_check(db: AsyncSession = Depends(get_db)) -> Dict[str, str]:
+async def health_check(db: AsyncSession = Depends(db_session)) -> Dict[str, str]:
     """Health check endpoint with database connectivity."""
     try:
         # Test database connection
